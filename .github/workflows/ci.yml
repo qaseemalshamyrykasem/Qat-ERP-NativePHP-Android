@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    name: Validate Project
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, sqlite3, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php83-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php83-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --optimize-autoloader --no-interaction
+
+      - name: Setup environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+          touch database/database.sqlite
+
+      - name: Verify NativePHP configuration
+        run: |
+          php artisan native:version
+          echo "App ID: $(grep NATIVEPHP_APP_ID .env.example | head -1)"
+          echo "NativePHP config exists: $(test -f config/nativephp.php && echo yes || echo no)"
+
+      - name: Run Laravel validation
+        run: |
+          php artisan config:cache
+          php artisan route:list --count
+          php artisan view:cache

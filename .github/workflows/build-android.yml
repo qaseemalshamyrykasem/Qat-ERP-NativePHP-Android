@@ -50,6 +50,15 @@ jobs:
           extensions: mbstring, xml, sqlite3, pdo_sqlite
           tools: composer:v2
           coverage: none
+- name: Prepare Laravel directories
+  run: |
+    mkdir -p bootstrap/cache
+    mkdir -p storage/framework/cache/data
+    mkdir -p storage/framework/sessions
+    mkdir -p storage/framework/views
+    mkdir -p storage/framework/testing
+    mkdir -p storage/logs
+    touch storage/logs/laravel.log
 
       - name: Cache Composer dependencies
         id: composer-cache
@@ -59,9 +68,8 @@ jobs:
           key: ${{ runner.os }}-php83-composer-${{ hashFiles('composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-php83-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
+- name: Install Composer dependencies
+  run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       - name: Setup application environment
         run: |
